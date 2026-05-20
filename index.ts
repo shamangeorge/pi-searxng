@@ -3,7 +3,7 @@ import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { search } from "./searxng.js";
 import { fetchContent } from "./extract.js";
-import { isGitHubUrl, cloneRepo } from "./github.js";
+
 
 const searchCache = new Map<string, { query: string; results: any[] }>();
 
@@ -16,11 +16,6 @@ function formatSearchResults(results: any[]): string {
   return results.map((r, i) => 
     `${i + 1}. **${r.title}**\n   ${r.url}\n   ${r.snippet.slice(0, 200)}${r.snippet.length > 200 ? "..." : ""}`
   ).join("\n\n");
-}
-
-function formatRepoFiles(files: any[]): string {
-  return files.slice(0, 30).map(f => `- ${f.path}`).join("\n") + 
-    (files.length > 30 ? `\n... and ${files.length - 30} more files` : "");
 }
 
 export default function (pi: ExtensionAPI) {
@@ -70,7 +65,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "fetch_content",
     label: "Fetch Content",
-    description: "Fetch URL content. Automatically clones GitHub repos.",
+    description: "Fetch and extract readable content from a URL.",
     parameters: Type.Object({
       url: Type.String({ description: "URL to fetch" })
     }),
@@ -78,28 +73,6 @@ export default function (pi: ExtensionAPI) {
     async execute(_id, params, signal) {
       if (signal?.aborted) {
         return { content: [{ type: "text", text: "Aborted" }] };
-      }
-
-      if (isGitHubUrl(params.url)) {
-        const repo = await cloneRepo(params.url);
-        
-        if (!repo) {
-          return {
-            content: [{ type: "text", text: "Failed to clone repository" }],
-            details: { error: "Clone failed" }
-          };
-        }
-        
-        const output = `## Repository Cloned\n\n**Path:** \`${repo.localPath}\`\n\n**Files (${repo.files.length}):**\n${formatRepoFiles(repo.files)}\n\n---\n\nUse \`read\` tool to explore files.`;
-        
-        return {
-          content: [{ type: "text", text: output }],
-          details: { 
-            localPath: repo.localPath, 
-            fileCount: repo.files.length,
-            files: repo.files.slice(0, 10).map(f => f.path)
-          }
-        };
       }
 
       const result = await fetchContent(params.url);
@@ -129,18 +102,12 @@ export default function (pi: ExtensionAPI) {
     
     renderCall(args, theme) {
       const url = (args as any).url || "";
-      const isGH = isGitHubUrl(url);
       const display = url.length > 50 ? url.slice(0, 47) + "..." : url;
-      const prefix = isGH ? "clone " : "fetch ";
-      const color = isGH ? "warning" : "accent";
-      return new Text(theme.fg("toolTitle", prefix) + theme.fg(color, display), 0, 0);
+      return new Text(theme.fg("toolTitle", "fetch ") + theme.fg("accent", display), 0, 0);
     },
     
     renderResult(result, _opts, theme) {
       const details = result.details as any;
-      if (details?.localPath) {
-        return new Text(theme.fg("success", `cloned`) + theme.fg("muted", ` ${details.fileCount} files`), 0, 0);
-      }
       const length = details?.length || 0;
       return new Text(theme.fg("success", `${length} chars`) + (details?.truncated ? theme.fg("warning", " [truncated]") : ""), 0, 0);
     }

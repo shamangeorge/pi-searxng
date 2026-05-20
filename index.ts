@@ -2,9 +2,6 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 import { search } from "./searxng.js";
-import { fetchContent } from "./extract.js";
-
-
 const searchCache = new Map<string, { query: string; results: any[] }>();
 
 function generateId(): string {
@@ -59,57 +56,6 @@ export default function (pi: ExtensionAPI) {
     renderResult(result, _opts, theme) {
       const count = (result.details as any)?.resultCount || 0;
       return new Text(theme.fg("success", `${count} results`), 0, 0);
-    }
-  });
-
-  pi.registerTool({
-    name: "fetch_content",
-    label: "Fetch Content",
-    description: "Fetch and extract readable content from a URL.",
-    parameters: Type.Object({
-      url: Type.String({ description: "URL to fetch" })
-    }),
-    
-    async execute(_id, params, signal) {
-      if (signal?.aborted) {
-        return { content: [{ type: "text", text: "Aborted" }] };
-      }
-
-      const result = await fetchContent(params.url);
-      
-      if (result.error) {
-        return {
-          content: [{ type: "text", text: `Error: ${result.error}` }],
-          details: { error: result.error }
-        };
-      }
-      
-      const truncated = result.content.length > 30000;
-      const content = truncated 
-        ? result.content.slice(0, 30000) + "\n\n[Content truncated...]"
-        : result.content;
-      
-      return {
-        content: [{ type: "text", text: content }],
-        details: { 
-          title: result.title, 
-          url: result.url, 
-          truncated,
-          length: result.content.length 
-        }
-      };
-    },
-    
-    renderCall(args, theme) {
-      const url = (args as any).url || "";
-      const display = url.length > 50 ? url.slice(0, 47) + "..." : url;
-      return new Text(theme.fg("toolTitle", "fetch ") + theme.fg("accent", display), 0, 0);
-    },
-    
-    renderResult(result, _opts, theme) {
-      const details = result.details as any;
-      const length = details?.length || 0;
-      return new Text(theme.fg("success", `${length} chars`) + (details?.truncated ? theme.fg("warning", " [truncated]") : ""), 0, 0);
     }
   });
 

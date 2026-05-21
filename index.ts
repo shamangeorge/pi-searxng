@@ -6,9 +6,6 @@ import type { SearchResult } from "./searxng.js";
 import { search } from "./searxng.js";
 import { loadConfig } from "./config.js";
 
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const MAX_CACHE_SIZE = 200;
-
 interface CacheEntry {
   query: string;
   results: SearchResult[];
@@ -20,6 +17,8 @@ const searchCache = new Map<string, CacheEntry>();
 
 const config = loadConfig();
 const CACHE_FRESHNESS_MS = config.cacheFreshnessMs;
+const CACHE_TTL_MS = config.cacheTtlMs;
+const MAX_CACHE_SIZE = config.cacheMaxSize;
 
 function cleanup(): void {
   const now = Date.now();

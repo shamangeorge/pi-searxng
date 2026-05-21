@@ -9,6 +9,7 @@ export interface Config {
   timeoutMs: number;
   maxResults: number;
   cacheFreshnessMs: number;
+  safesearch: "off" | "moderate" | "strict";
 }
 
 export function loadConfig(): Config {
@@ -16,7 +17,8 @@ export function loadConfig(): Config {
     searxngUrl: process.env.SEARXNG_URL || "http://localhost:8080",
     timeoutMs: 30000,
     maxResults: 10,
-    cacheFreshnessMs: 15 * 60 * 1000 // 15 minutes
+    cacheFreshnessMs: 15 * 60 * 1000, // 15 minutes
+    safesearch: "off"
   };
 
   if (!existsSync(CONFIG_PATH)) {
@@ -49,6 +51,10 @@ export function loadConfig(): Config {
     }
     if (typeof config.cacheFreshnessMs !== "number" || config.cacheFreshnessMs <= 0) {
       throw new Error("'cacheFreshnessMs' must be a positive number");
+    }
+    const validSafesearchValues = ["off", "moderate", "strict"];
+    if (!validSafesearchValues.includes(config.safesearch)) {
+      throw new Error("'safesearch' must be one of: 'off', 'moderate', 'strict'");
     }
 
     return config;

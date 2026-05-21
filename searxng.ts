@@ -15,10 +15,16 @@ const MAX_ERROR_BODY_LENGTH = 200;
 export async function search(query: string, limit?: number): Promise<SearchResponse> {
   const config = loadConfig();
   const url = new URL(`${config.searxngUrl}/search`);
-  
+
+  const safesearchMap: Record<string, "0" | "1" | "2"> = {
+    off: "0",
+    moderate: "1",
+    strict: "2"
+  };
+
   url.searchParams.set("q", query);
   url.searchParams.set("format", "json");
-  url.searchParams.set("safesearch", "0");
+  url.searchParams.set("safesearch", safesearchMap[config.safesearch]);
   
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.timeoutMs);

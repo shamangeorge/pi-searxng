@@ -8,13 +8,15 @@ export interface Config {
   searxngUrl: string;
   timeoutMs: number;
   maxResults: number;
+  cacheFreshnessMs: number;
 }
 
 export function loadConfig(): Config {
   const defaults: Config = {
     searxngUrl: process.env.SEARXNG_URL || "http://localhost:8080",
     timeoutMs: 30000,
-    maxResults: 10
+    maxResults: 10,
+    cacheFreshnessMs: 15 * 60 * 1000 // 15 minutes
   };
 
   try {
@@ -30,6 +32,9 @@ export function loadConfig(): Config {
       }
       if (typeof config.maxResults !== "number" || config.maxResults <= 0) {
         throw new Error("'maxResults' must be a positive number");
+      }
+      if (typeof config.cacheFreshnessMs !== "number" || config.cacheFreshnessMs <= 0) {
+        throw new Error("'cacheFreshnessMs' must be a positive number");
       }
 
       return config;

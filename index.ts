@@ -1,24 +1,32 @@
+import { createHash } from "node:crypto";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
 import type { SearchResult } from "./searxng.js";
 import { search } from "./searxng.js";
+import { loadConfig } from "./config.js";
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_CACHE_SIZE = 200;
 
-const searchCache = new Map<string, {
+interface CacheEntry {
   query: string;
   results: SearchResult[];
-  timestamp: number;
-}>();
+  createdAt: number;
+  lastAccessed: number;
+}
+
+const searchCache = new Map<string, CacheEntry>();
+
+const config = loadConfig();
+const CACHE_FRESHNESS_MS = config.cacheFreshnessMs;
 
 function cleanup(): void {
   const now = Date.now();
 
   // Remove expired entries
   for (const [id, entry] of searchCache) {
-    if (now - entry.timestamp > CACHE_TTL_MS) {
+    if (now - entry.lastAccessed > CACHE_TTL_MS) {
       searchCache.delete(id);
     }
   }
@@ -30,11 +38,11 @@ function cleanup(): void {
   }
 }
 
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+function generateId(query: string): string {
+  return createHash("md5").update(query).digest("hex");
 }
 
-function formatSearchResults(results: any[]): string {
+function formatSearchResults(results: SearchResult[]): string {
   if (results.length === 0) return "No results found.";
   return results.map((r, i) => 
     `${i + 1}. **${r.title}**\n   ${r.url}\n   ${r.snippet.slice(0, 200)}${r.snippet.length > 200 ? "..." : ""}`
@@ -55,14 +63,32 @@ export default function (pi: ExtensionAPI) {
       if (signal?.aborted) {
         return { content: [{ type: "text", text: "Aborted" }] };
       }
-      
-      const searchId = generateId();
-      
+
+      const searchId = generateId(params.query);
+
       try {
         cleanup();
-        const { results } = await search(params.query, params.limit);
-        searchCache.set(searchId, { query: params.query, results, timestamp: Date.now() });
-        
+        const cached = searchCache.get(searchId);
+        const isStale = cached && (Date.now() - cached.createdAt > CACHE_FRESHNESS_MS);
+
+        let results: SearchResult[];
+
+        if (cached && !isStale) {
+          // Fresh cache → return directly
+          cached.lastAccessed = Date.now();
+          results = cached.results;
+        } else {
+          // Not found or stale → search SearXNG
+          const { results: newResults } = await search(params.query, params.limit);
+          results = newResults;
+          searchCache.set(searchId, {
+            query: params.query,
+            results,
+            createdAt: isStale ? Date.now() : (cached?.createdAt || Date.now()),
+            lastAccessed: Date.now()
+          });
+        }
+
         return {
           content: [{ type: "text", text: formatSearchResults(results) }],
           details: { searchId, resultCount: results.length, query: params.query }
@@ -106,8 +132,8 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
-      // Refresh timestamp (LRU behavior)
-      cached.timestamp = Date.now();
+      // Update lastAccessed (LRU behavior)
+      cached.lastAccessed = Date.now();
 
       return {
         content: [{ type: "text", text: `Query: "${cached.query}"\n\n${formatSearchResults(cached.results)}` }],

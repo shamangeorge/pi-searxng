@@ -56,10 +56,11 @@ export default function (pi: ExtensionAPI) {
         return { content: [{ type: "text", text: "Aborted" }] };
       }
       
+      const searchId = generateId();
+      
       try {
         cleanup();
         const { results } = await search(params.query, params.limit);
-        const searchId = generateId();
         searchCache.set(searchId, { query: params.query, results, timestamp: Date.now() });
         
         return {
@@ -69,7 +70,7 @@ export default function (pi: ExtensionAPI) {
       } catch (err) {
         return {
           content: [{ type: "text", text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
-          details: { error: String(err) }
+          details: { searchId, error: String(err) }
         };
       }
     },
@@ -99,14 +100,18 @@ export default function (pi: ExtensionAPI) {
 
       const cached = searchCache.get(params.searchId);
       if (!cached) {
-        return { content: [{ type: "text", text: "Search not found" }] };
+        return {
+          content: [{ type: "text", text: "Search not found" }],
+          details: { searchId: params.searchId, error: "Search not found" }
+        };
       }
 
       // Refresh timestamp (LRU behavior)
       cached.timestamp = Date.now();
 
       return {
-        content: [{ type: "text", text: `Query: "${cached.query}"\n\n${formatSearchResults(cached.results)}` }]
+        content: [{ type: "text", text: `Query: "${cached.query}"\n\n${formatSearchResults(cached.results)}` }],
+        details: { searchId: params.searchId, query: cached.query, resultCount: cached.results.length }
       };
     }
   });

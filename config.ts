@@ -16,13 +16,27 @@ export function loadConfig(): Config {
     timeoutMs: 30000,
     maxResults: 10
   };
-  
+
   try {
     if (existsSync(CONFIG_PATH)) {
       const raw = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
-      return { ...defaults, ...raw };
+      const config = { ...defaults, ...raw } as Config;
+
+      if (typeof config.searxngUrl !== "string") {
+        throw new Error("'searxngUrl' must be a string");
+      }
+      if (typeof config.timeoutMs !== "number" || config.timeoutMs <= 0) {
+        throw new Error("'timeoutMs' must be a positive number");
+      }
+      if (typeof config.maxResults !== "number" || config.maxResults <= 0) {
+        throw new Error("'maxResults' must be a positive number");
+      }
+
+      return config;
     }
-  } catch {}
-  
+  } catch (err) {
+    console.warn(`Invalid config file, using defaults: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   return defaults;
 }

@@ -61,7 +61,10 @@ export async function search(query: string, limit?: number): Promise<SearchRespo
       .slice(0, limit || config.maxResults)
       .map((r: any) => ({
         title: r.title || "Untitled",
-        url: r.url,
+        url:
+          typeof r.url === "string" && r.url ? r.url
+          : typeof r.url_normalized === "string" && r.url_normalized ? r.url_normalized
+          : "",
         snippet: r.content || r.abstract || ""
       }));
     

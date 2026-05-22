@@ -41,6 +41,16 @@ type GetResultsDetails = GetResultsSuccessDetails | GetResultsErrorDetails;
 
 const searchCache = new Map<string, CacheEntry>();
 
+// Helper that retrieves a cache entry and moves it to the end of the Map (LRU)
+function getCacheEntry(id: string): CacheEntry | undefined {
+  const entry = searchCache.get(id);
+  if (entry) {
+    searchCache.delete(id);
+    searchCache.set(id, entry); // re-insert → moves to end (most recently used)
+  }
+  return entry;
+}
+
 const config = loadConfig();
 const CACHE_FRESHNESS_MS = config.cacheFreshnessMs;
 const CACHE_TTL_MS = config.cacheTtlMs;
@@ -96,7 +106,7 @@ export default function (pi: ExtensionAPI) {
 
       try {
         cleanup();
-        const cached = searchCache.get(searchId);
+        const cached = getCacheEntry(searchId);
         const isStale = cached && (Date.now() - cached.createdAt > CACHE_FRESHNESS_MS);
 
         let results: SearchResult[];
@@ -152,7 +162,7 @@ export default function (pi: ExtensionAPI) {
     async execute(_id, params) {
       cleanup();
 
-      const cached = searchCache.get(params.searchId);
+      const cached = getCacheEntry(params.searchId);
       if (!cached) {
         return {
           content: [{ type: "text", text: "Search not found" }],

@@ -91,7 +91,7 @@ export default function (pi: ExtensionAPI) {
     description: "Search the web using SearXNG",
     parameters: Type.Object({
       query: Type.String({ description: "Search query" }),
-      limit: Type.Optional(Type.Number({ description: "Max results", default: 10 }))
+      limit: Type.Optional(Type.Number({ description: "Max results (1–50, clamped and rounded)" }))
     }),
     
     async execute(_id, params, signal) {
@@ -103,6 +103,17 @@ export default function (pi: ExtensionAPI) {
       }
 
       const searchId = generateId(params.query);
+
+      // Sanitize limit parameter
+      let warningNote = "";
+      let limit: number | undefined;
+      if (params.limit !== undefined) {
+        const originalLimit = params.limit;
+        limit = Math.max(1, Math.min(50, Math.ceil(params.limit)));
+        if (limit !== originalLimit) {
+          warningNote = `Note: limit was clamped from ${originalLimit} to ${limit}.\n\n`;
+        }
+      }
 
       try {
         cleanup();
@@ -117,7 +128,7 @@ export default function (pi: ExtensionAPI) {
           results = cached.results;
         } else {
           // Not found or stale → search SearXNG
-          const { results: newResults } = await search(params.query, params.limit);
+          const { results: newResults } = await search(params.query, limit);
           results = newResults;
           searchCache.set(searchId, {
             query: params.query,
@@ -128,7 +139,7 @@ export default function (pi: ExtensionAPI) {
         }
 
         return {
-          content: [{ type: "text", text: formatSearchResults(results) }],
+          content: [{ type: "text", text: warningNote + formatSearchResults(results) }],
           details: { searchId, resultCount: results.length, query: params.query }
         } as AgentToolResult<WebSearchDetails>;
       } catch (err) {

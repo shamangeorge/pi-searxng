@@ -1,7 +1,7 @@
 {
   "name": "@amartinr/pi-searxng",
-  "version": "1.0.1",
-  "description": "SearXNG web search extension for Pi",
+  "version": "1.0.2",
+  "description": "A minimalist SearXNG web search extension for Pi",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

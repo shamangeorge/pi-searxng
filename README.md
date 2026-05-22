@@ -80,7 +80,7 @@ Search the web using SearXNG. Results are automatically cached for subsequent id
 
 **Parameters:**
 - `query` (string, required) - Search query
-- `limit` (number, optional) - Max results to return (overrides `maxResults` from config)
+- `limit` (number, optional) - Max results to return (overrides `maxResults` from config). Note: the actual number returned depends on SearXNG's internal configuration.
 
 **Returns:** A `searchId` in the `details` field, which can be used with `get_search_results` or passed to subsequent calls.
 

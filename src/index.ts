@@ -8,6 +8,7 @@ import { loadConfig } from "./config.js";
 
 interface CacheEntry {
   query: string;
+  limit: number | undefined;
   results: SearchResult[];
   createdAt: number;
   lastAccessed: number;
@@ -73,8 +74,9 @@ function cleanup(): void {
   }
 }
 
-function generateId(query: string): string {
-  return createHash("md5").update(query).digest("hex");
+function generateId(query: string, limit?: number): string {
+  const key = limit !== undefined ? `${query}|${limit}` : query;
+  return createHash("md5").update(key).digest("hex");
 }
 
 function formatSearchResults(results: SearchResult[]): string {
@@ -91,28 +93,28 @@ export default function (pi: ExtensionAPI) {
     description: "Search the web using SearXNG",
     parameters: Type.Object({
       query: Type.String({ description: "Search query" }),
-      limit: Type.Optional(Type.Number({ description: "Max results (1–50, clamped and rounded)" }))
+      limit: Type.Optional(Type.Number({ description: "Max results to return" }))
     }),
     
     async execute(_id, params, signal) {
-      if (signal?.aborted) {
-        return {
-          content: [{ type: "text", text: "Aborted" }],
-          details: { searchId: generateId(params.query), error: "Aborted" }
-        } as AgentToolResult<WebSearchDetails>;
-      }
-
-      const searchId = generateId(params.query);
-
       // Sanitize limit parameter
       let warningNote = "";
       let limit: number | undefined;
       if (params.limit !== undefined) {
         const originalLimit = params.limit;
-        limit = Math.max(1, Math.min(50, Math.ceil(params.limit)));
+        limit = Math.max(1, Math.ceil(params.limit));
         if (limit !== originalLimit) {
-          warningNote = `Note: limit was clamped from ${originalLimit} to ${limit}.\n\n`;
+          warningNote = `Note: limit was adjusted from ${originalLimit} to ${limit}.\n\n`;
         }
+      }
+
+      const searchId = generateId(params.query, limit);
+
+      if (signal?.aborted) {
+        return {
+          content: [{ type: "text", text: "Aborted" }],
+          details: { searchId, error: "Aborted" }
+        } as AgentToolResult<WebSearchDetails>;
       }
 
       try {
@@ -132,6 +134,7 @@ export default function (pi: ExtensionAPI) {
           results = newResults;
           searchCache.set(searchId, {
             query: params.query,
+            limit,
             results,
             createdAt: isStale ? Date.now() : (cached?.createdAt || Date.now()),
             lastAccessed: Date.now()
@@ -184,8 +187,9 @@ export default function (pi: ExtensionAPI) {
       // Update lastAccessed (LRU behavior)
       cached.lastAccessed = Date.now();
 
+      const limitText = cached.limit !== undefined ? ` (limit: ${cached.limit})` : "";
       return {
-        content: [{ type: "text", text: `Query: "${cached.query}"\n\n${formatSearchResults(cached.results)}` }],
+        content: [{ type: "text", text: `Query: "${cached.query}"${limitText}\n\n${formatSearchResults(cached.results)}` }],
         details: { searchId: params.searchId, query: cached.query, resultCount: cached.results.length }
       } as AgentToolResult<GetResultsDetails>;
     }

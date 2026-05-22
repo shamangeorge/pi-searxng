@@ -21,6 +21,7 @@ This extension follows a **minimalist** approach:
 - **No repository cloning** — Unlike the original, it doesn't clone GitHub repos
 - **No external tools** — Doesn't require `git` or any system dependencies
 - **Self-contained** — Everything runs in-process, no background services
+- **Updated imports** — Uses current `@earendil-works/` scoped packages (Pi coding agent, TUI, TypeBox)
 
 If you need content extraction or repo browsing, consider using other Pi extensions for those tasks.
 

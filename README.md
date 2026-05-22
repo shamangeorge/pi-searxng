@@ -1,12 +1,28 @@
 # @amartinr/pi-searxng
 
-SearXNG web search extension for [Pi](https://github.com/earendil-works/pi).
+A **minimalist** SearXNG web search extension for [Pi](https://github.com/earendil-works/pi).
+
+This is a focused, no-frills implementation that provides only web search and result caching — no content fetching, no repository cloning, no external dependencies beyond SearXNG.
+
+> **Note:** This is an independent fork of [jcha0713/pi-searxng](https://github.com/jcha0713/pi-searxng), stripped down to its core search functionality with improved caching.
 
 ## Features
 
 - **Web Search** - Search the web via a SearXNG instance
 - **Cached Results** - Retrieve previous search results by ID for follow-up queries
 - **Smart Caching** - Deterministic IDs, freshness TTL, LRU eviction, and deduplication
+- **Safesearch** - Configurable content filtering (`off`, `moderate`, `strict`)
+
+## Design Philosophy
+
+This extension follows a **minimalist** approach:
+
+- **Web search only** — No content fetching, no HTML-to-Markdown conversion
+- **No repository cloning** — Unlike the original, it doesn't clone GitHub repos
+- **No external tools** — Doesn't require `git` or any system dependencies
+- **Self-contained** — Everything runs in-process, no background services
+
+If you need content extraction or repo browsing, consider using other Pi extensions for those tasks.
 
 ## Installation
 

@@ -7,31 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.4] - 2025-03-01
+## [1.0.1] - 2026-05-22
 
 ### Changed
-- Code cleanup: removed experimental query editor feature to maintain clean agent workflow.
-
-## [1.0.3] - 2025-03-01
-
-### Fixed
-- Gist URLs (gist.github.com) are now fetched as regular web content instead of attempting to clone them as repositories.
-
-## [1.0.2] - 2025-03-01
-
-### Fixed
-- GitHub blob and tree URLs now clone correctly. Previously, URLs like `github.com/owner/repo/blob/main/file.md` would fail because the full URL was passed to `git clone`. Now the URL is parsed to extract the owner, repo, and branch, and a clean clone URL is constructed.
-
-## [1.0.1] - 2025-02-25
-
-### Changed
-- Updated package description and metadata
-
-## [1.0.0] - 2025-02-25
+- **Restructured for npm publishing** — source moved to `src/`, compiled output to `dist/`
+- **Removed legacy root TypeScript files** — clean project layout
 
 ### Added
-- Initial release
-- `web_search` tool - Search the web via SearXNG
-- `fetch_content` tool - Extract article content from URLs
-- `get_search_results` tool - Retrieve cached search results by ID
-- Automatic GitHub repository cloning when fetching GitHub URLs
+- **Deterministic cache IDs** — MD5 hash of query enables cache deduplication and `get_search_results` lookups
+- **Configurable safesearch** — `"off"`, `"moderate"`, `"strict"` mapped to SearXNG's `0/1/2`
+- **Cache with TTL and LRU eviction** — freshness TTL (15 min), access TTL (24h), max 200 entries
+- **Configurable cache settings** — `cacheFreshnessMs`, `cacheTtlMs`, `cacheMaxSize` in config
+- **Cache config fields** — all cache parameters tunable via `config.json`
+
+### Fixed
+- **Error handling** — malformed JSON and non-OK responses now produce descriptive errors with URL and body
+- **Config validation** — field type checks with `console.warn` on invalid values, `console.error` on corrupt JSON
+- **Config path** — robust `resolveHomeDir()` with `PI_CODING_AGENT_DIR`, `HOME`, `homedir()` fallbacks
+- **URL field mapping** — fallback to `url_normalized` when `r.url` is missing
+- **Consistent response shape** — `details` field present in both success and error paths for both tools
+- **Cache eviction** — LRU ordering instead of FIFO for correct least-recently-used behavior
+- **Publish config** — `files` restricted to `dist/`, `pi.extensions` points to compiled JS
+
+### Removed
+- **`fetch_content` tool** — out of scope for this SearXNG-only search plugin
+- **GitHub repo cloning** — no longer attempts to clone repositories from search results
+
+### Chores
+- Added `package-lock.json` to `.gitignore`
+- Corrected authorship and repository URL
+- Normalized `repository.url` to `git+https` format
+
+## [1.0.0] - 2026-05-20
+
+### Added
+- Initial fork of [jcha0713/pi-searxng](https://github.com/jcha0713/pi-searxng)
+- `web_search` tool — search the web via SearXNG
+- `get_search_results` tool — retrieve cached search results by ID
+- Basic in-memory search cache

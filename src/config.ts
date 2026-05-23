@@ -61,7 +61,7 @@ export function loadConfig(): Config {
   };
 
   if (!existsSync(CONFIG_PATH)) {
-    console.warn(
+    console.info(
       `Config file not found at ${CONFIG_PATH}. Using default settings.`
     );
     return defaults;

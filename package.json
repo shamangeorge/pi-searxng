@@ -38,6 +38,7 @@
     "searxng",
     "web-search"
   ],
+  "engines": { "node": ">=18" },
   "license": "MIT",
   "author": "A. Martin <abel.martin.ruiz@gmail.com>",
   "publishConfig": {

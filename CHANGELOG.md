@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-05-23
+
+### Added
+- **`engines` field** — enforces Node.js >=18 at install time
+
+### Fixed
+- **Double body read in `search()`** — `res.json()` consumes the response
+  stream internally; calling `res.text()` in the catch block then threw
+  "Body is unusable". Fixed by reading the body once with `res.text()` and
+  parsing with `JSON.parse()` manually
+- **Config loaded on every search** — `loadConfig()` was called inside
+  `search()` on each invocation in addition to the module-level call in
+  `index.ts`. Fixed by passing the already-loaded `Config` object as a
+  parameter to `search()`
+- **Missing config log level** — absence of `config.json` logged as
+  `console.warn`; downgraded to `console.info` since using defaults is
+  the normal case
+
+### Changed
+- **`limit` included in cache key** — cache ID is now an MD5 hash of
+  `query|limit` when a limit is provided, so the same query with different
+  limits gets independent cache entries
+- **`limit` parameter sanitized** — non-integer or sub-1 values are
+  rounded up to the nearest integer; a note is included in the response
+  when the value was adjusted
+- **Removed 50-result hard cap** — results are now only capped by
+  `maxResults` from config and SearXNG's own limits
+
 ## [1.0.1] - 2026-05-22
 
 ### Changed

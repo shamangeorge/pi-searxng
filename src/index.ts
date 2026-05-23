@@ -130,7 +130,7 @@ export default function (pi: ExtensionAPI) {
           results = cached.results;
         } else {
           // Not found or stale → search SearXNG
-          const { results: newResults } = await search(params.query, limit);
+          const { results: newResults } = await search(params.query, limit, config);
           results = newResults;
           searchCache.set(searchId, {
             query: params.query,

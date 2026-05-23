@@ -1,4 +1,4 @@
-import { loadConfig } from "./config.js";
+import type { Config } from "./config.js";
 
 export interface SearchResult {
   title: string;
@@ -12,8 +12,7 @@ export interface SearchResponse {
 
 const MAX_ERROR_BODY_LENGTH = 200;
 
-export async function search(query: string, limit?: number): Promise<SearchResponse> {
-  const config = loadConfig();
+export async function search(query: string, limit: number | undefined, config: Config): Promise<SearchResponse> {
   const url = new URL(`${config.searxngUrl}/search`);
 
   const safesearchMap: Record<string, "0" | "1" | "2"> = {
@@ -43,23 +42,25 @@ export async function search(query: string, limit?: number): Promise<SearchRespo
       throw new Error(`SearXNG returned ${res.status} at ${url.toString()}: ${body}`);
     }
 
+    // Read the body once as text to avoid "Body is unusable" errors when
+    // trying to read it a second time after a failed res.json() call.
+    const responseText = await res.text();
+
     const contentType = res.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) {
-      const body = (await res.text()).slice(0, MAX_ERROR_BODY_LENGTH);
       throw new Error(
         `SearXNG returned non-JSON response (Content-Type: "${contentType}") at ${url.toString()}. ` +
-        `First ${MAX_ERROR_BODY_LENGTH} chars: ${body}`
+        `First ${MAX_ERROR_BODY_LENGTH} chars: ${responseText.slice(0, MAX_ERROR_BODY_LENGTH)}`
       );
     }
 
     let data;
     try {
-      data = await res.json();
+      data = JSON.parse(responseText);
     } catch {
-      const body = (await res.text()).slice(0, MAX_ERROR_BODY_LENGTH);
       throw new Error(
         `Failed to parse SearXNG response as JSON at ${url.toString()}. ` +
-        `Response may be an error page. First ${MAX_ERROR_BODY_LENGTH} chars: ${body}`
+        `Response may be an error page. First ${MAX_ERROR_BODY_LENGTH} chars: ${responseText.slice(0, MAX_ERROR_BODY_LENGTH)}`
       );
     }
     

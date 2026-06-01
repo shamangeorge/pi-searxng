@@ -1,6 +1,6 @@
 {
   "name": "@amartinr/pi-searxng",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A minimalist SearXNG web search extension for Pi",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,9 +15,7 @@
     "prepublish": "npm run clean && npm run build"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*",
-    "@sinclair/typebox": "*"
+    "@earendil-works/pi-coding-agent": "*"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
@@ -33,6 +31,7 @@
     "url": "git+https://github.com/amartinr/pi-searxng.git"
   },
   "keywords": [
+    "pi-extension",
     "pi-package",
     "pi",
     "searxng",

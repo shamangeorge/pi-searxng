@@ -18,8 +18,10 @@
     "@earendil-works/pi-coding-agent": "*"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@earendil-works/pi-tui": "^0.78.0",
+    "@sinclair/typebox": "*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
   },
   "pi": {
     "extensions": [

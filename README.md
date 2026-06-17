@@ -1,10 +1,14 @@
-# @amartinr/pi-searxng
+# pi-searxng
 
 A **minimalist** SearXNG web search extension for [Pi](https://github.com/earendil-works/pi).
 
 This is a focused, no-frills implementation that provides only web search and result caching — no content fetching, no repository cloning, no external dependencies beyond SearXNG.
 
-> **Note:** This is an independent fork of [jcha0713/pi-searxng](https://github.com/jcha0713/pi-searxng), stripped down to its core search functionality with improved caching.
+> **Note:** This is an independent fork of [shamangeorge/pi-searxng](https://github.com/shamangeorge/pi-searxng),
+> itself forked from [amartinr/pi-searxng](https://github.com/amartinr/pi-searxng)
+> (originally derived from [jcha0713/pi-searxng](https://github.com/jcha0713/pi-searxng)).
+> This fork adds support for self-hosted SearXNG instances served behind a private/internal
+> certificate authority via a custom CA certificate (see `caCertPath` below).
 
 ## Features
 
@@ -27,15 +31,19 @@ If you need content extraction or repo browsing, consider using other Pi extensi
 
 ## Installation
 
-```bash
-pi install npm:@amartinr/pi-searxng
-```
-
-Or try without installing:
+> **This fork is not published to npm.** Install it by cloning the repo
+> directly into your Pi extensions directory and building it locally.
 
 ```bash
-pi -e npm:@amartinr/pi-searxng
+git clone git@github.com:shamangeorge/pi-searxng.git \
+  ~/.pi/agent/extensions/pi-searxng
+cd ~/.pi/agent/extensions/pi-searxng
+npm install
+npm run build
 ```
+
+Then create your `config.json` (see [Configuration](#configuration)) and
+restart Pi to load the extension.
 
 ## Building
 
@@ -53,6 +61,7 @@ Create `~/.pi/agent/extensions/pi-searxng/config.json`:
 ```json
 {
   "searxngUrl": "http://localhost:8080",
+  "caCertPath": "/path/to/ca.pem",
   "timeoutMs": 30000,
   "maxResults": 10,
   "safesearch": "off"
@@ -62,6 +71,7 @@ Create `~/.pi/agent/extensions/pi-searxng/config.json`:
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `searxngUrl` | string | `http://localhost:8080` | URL of the SearXNG instance (can also be set via `SEARXNG_URL` env var) |
+| `caCertPath` | string | _(unset)_ | Path to a custom CA certificate (PEM) for instances behind a private/internal CA (can also be set via `SEARXNG_CA_CERT` env var). When set, requests use `node:https` with this CA instead of global `fetch` |
 | `timeoutMs` | number | `30000` | HTTP request timeout in milliseconds |
 | `maxResults` | number | `10` | Maximum number of results returned per search |
 | `safesearch` | string | `"off"` | Content filtering level (`"off"`, `"moderate"`, `"strict"`) |

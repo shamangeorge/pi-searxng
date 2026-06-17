@@ -31,3 +31,18 @@ name = "osv-scanner"
 # Secret detection across the repo.
 [[plugin]]
 name = "trufflehog"
+
+# Ignore CVEs in dev/build-only transitive dependencies that are pinned by
+# the upstream @earendil-works/pi-coding-agent npm-shrinkwrap.json. These
+# packages (protobufjs, ws) are only used at build time for type checking,
+# are never included in the shipped extension (dist/), and cannot be bumped
+# from this repo because the upstream shrinkwrap overrides consumer
+# `overrides`. Revisit when pi-coding-agent ships patched versions.
+[[triage]]
+match.rules = [
+  "osv-scanner:CVE-2026-48712",
+  "osv-scanner:CVE-2026-54269",
+  "osv-scanner:CVE-2026-48779",
+]
+match.file_patterns = ["package-lock.json"]
+set.ignored = true

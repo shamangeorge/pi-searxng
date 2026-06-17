@@ -46,6 +46,57 @@ export interface Config {
   safesearch: "off" | "moderate" | "strict";
 }
 
+/** Config fields that must be positive numbers. */
+const POSITIVE_NUMBER_FIELDS = [
+  "timeoutMs",
+  "maxResults",
+  "cacheFreshnessMs",
+  "cacheTtlMs",
+  "cacheMaxSize"
+] as const;
+
+const VALID_SAFESEARCH = ["off", "moderate", "strict"];
+
+/**
+ * Validate a merged config object, throwing on the first invalid field.
+ * Kept separate from loadConfig to keep each function's complexity low.
+ */
+function validateConfig(config: Config): void {
+  if (typeof config.searxngUrl !== "string") {
+    throw new Error("'searxngUrl' must be a string");
+  }
+  if (config.caCertPath !== undefined && typeof config.caCertPath !== "string") {
+    throw new Error("'caCertPath' must be a string");
+  }
+  for (const field of POSITIVE_NUMBER_FIELDS) {
+    const value = config[field];
+    if (typeof value !== "number" || value <= 0) {
+      throw new Error(`'${field}' must be a positive number`);
+    }
+  }
+  if (!VALID_SAFESEARCH.includes(config.safesearch)) {
+    throw new Error("'safesearch' must be one of: 'off', 'moderate', 'strict'");
+  }
+}
+
+/** Read and parse the config file, returning null if missing or invalid JSON. */
+function readConfigFile(): Record<string, unknown> | null {
+  if (!existsSync(CONFIG_PATH)) {
+    console.info(`Config file not found at ${CONFIG_PATH}. Using default settings.`);
+    return null;
+  }
+  try {
+    return JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `Failed to parse config file (${CONFIG_PATH}): ${msg}\n` +
+      `SearXNG will use default settings. Fix the config file or delete it to restore defaults.`
+    );
+    return null;
+  }
+}
+
 export function loadConfig(): Config {
   const defaults: Config = {
     searxngUrl: process.env.SEARXNG_URL || "http://localhost:8080",
@@ -58,54 +109,15 @@ export function loadConfig(): Config {
     safesearch: "off"
   };
 
-  if (!existsSync(CONFIG_PATH)) {
-    console.info(
-      `Config file not found at ${CONFIG_PATH}. Using default settings.`
-    );
+  const raw = readConfigFile();
+  if (raw === null) {
     return defaults;
   }
 
-  let raw: unknown;
-  try {
-    raw = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `Failed to parse config file (${CONFIG_PATH}): ${msg}\n` +
-      `SearXNG will use default settings. Fix the config file or delete it to restore defaults.`
-    );
-    return defaults;
-  }
-
-  const config = { ...defaults, ...(raw as Record<string, unknown>) } as Config;
+  const config = { ...defaults, ...raw } as Config;
 
   try {
-    if (typeof config.searxngUrl !== "string") {
-      throw new Error("'searxngUrl' must be a string");
-    }
-    if (config.caCertPath !== undefined && typeof config.caCertPath !== "string") {
-      throw new Error("'caCertPath' must be a string");
-    }
-    if (typeof config.timeoutMs !== "number" || config.timeoutMs <= 0) {
-      throw new Error("'timeoutMs' must be a positive number");
-    }
-    if (typeof config.maxResults !== "number" || config.maxResults <= 0) {
-      throw new Error("'maxResults' must be a positive number");
-    }
-    if (typeof config.cacheFreshnessMs !== "number" || config.cacheFreshnessMs <= 0) {
-      throw new Error("'cacheFreshnessMs' must be a positive number");
-    }
-    const validSafesearchValues = ["off", "moderate", "strict"];
-    if (!validSafesearchValues.includes(config.safesearch)) {
-      throw new Error("'safesearch' must be one of: 'off', 'moderate', 'strict'");
-    }
-    if (typeof config.cacheTtlMs !== "number" || config.cacheTtlMs <= 0) {
-      throw new Error("'cacheTtlMs' must be a positive number");
-    }
-    if (typeof config.cacheMaxSize !== "number" || config.cacheMaxSize <= 0) {
-      throw new Error("'cacheMaxSize' must be a positive number");
-    }
-
+    validateConfig(config);
     return config;
   } catch (err) {
     console.warn(

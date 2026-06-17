@@ -41,6 +41,7 @@ const CONFIG_PATH = join(
 
 export interface Config {
   searxngUrl: string;
+  caCertPath?: string;
   timeoutMs: number;
   maxResults: number;
   cacheFreshnessMs: number;
@@ -52,6 +53,7 @@ export interface Config {
 export function loadConfig(): Config {
   const defaults: Config = {
     searxngUrl: process.env.SEARXNG_URL || "http://localhost:8080",
+    caCertPath: process.env.SEARXNG_CA_CERT || undefined,
     timeoutMs: 30000,
     maxResults: 10,
     cacheFreshnessMs: 15 * 60 * 1000, // 15 minutes
@@ -84,6 +86,9 @@ export function loadConfig(): Config {
   try {
     if (typeof config.searxngUrl !== "string") {
       throw new Error("'searxngUrl' must be a string");
+    }
+    if (config.caCertPath !== undefined && typeof config.caCertPath !== "string") {
+      throw new Error("'caCertPath' must be a string");
     }
     if (typeof config.timeoutMs !== "number" || config.timeoutMs <= 0) {
       throw new Error("'timeoutMs' must be a positive number");

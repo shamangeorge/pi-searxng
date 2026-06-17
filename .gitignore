@@ -14,6 +14,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Local instance config (may contain private URLs / cert paths)
+config.json
+
 # Environment variables
 .env
 .env.local

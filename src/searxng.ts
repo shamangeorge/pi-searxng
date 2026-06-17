@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import { request as httpsRequest } from "node:https";
 import type { Config } from "./config.js";
 
 export interface SearchResult {
@@ -12,6 +14,83 @@ export interface SearchResponse {
 
 const MAX_ERROR_BODY_LENGTH = 200;
 
+interface RawResponse {
+  status: number;
+  ok: boolean;
+  contentType: string;
+  body: string;
+}
+
+/**
+ * Fetch a URL using node:https so a custom CA certificate can be supplied
+ * (Node's global fetch/undici does not honor a per-request CA without undici).
+ */
+function fetchWithCa(
+  urlStr: string,
+  caCertPath: string,
+  timeoutMs: number
+): Promise<RawResponse> {
+  if (!existsSync(caCertPath)) {
+    return Promise.reject(new Error(`CA certificate not found at ${caCertPath}`));
+  }
+  const ca = readFileSync(caCertPath);
+
+  return new Promise<RawResponse>((resolve, reject) => {
+    const req = httpsRequest(
+      urlStr,
+      {
+        method: "GET",
+        ca,
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "pi-searxng/1.0"
+        }
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (c) => chunks.push(c as Buffer));
+        res.on("end", () => {
+          const status = res.statusCode || 0;
+          resolve({
+            status,
+            ok: status >= 200 && status < 300,
+            contentType: res.headers["content-type"] || "",
+            body: Buffer.concat(chunks).toString("utf-8")
+          });
+        });
+      }
+    );
+    req.setTimeout(timeoutMs, () => req.destroy(new Error("Request timed out")));
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+async function fetchRaw(urlStr: string, config: Config): Promise<RawResponse> {
+  if (config.caCertPath) {
+    return fetchWithCa(urlStr, config.caCertPath, config.timeoutMs);
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
+  try {
+    const res = await fetch(urlStr, {
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "pi-searxng/1.0"
+      }
+    });
+    return {
+      status: res.status,
+      ok: res.ok,
+      contentType: res.headers.get("content-type") || "",
+      body: await res.text()
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function search(query: string, limit: number | undefined, config: Config): Promise<SearchResponse> {
   const url = new URL(`${config.searxngUrl}/search`);
 
@@ -24,29 +103,18 @@ export async function search(query: string, limit: number | undefined, config: C
   url.searchParams.set("q", query);
   url.searchParams.set("format", "json");
   url.searchParams.set("safesearch", safesearchMap[config.safesearch]);
-  
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
-  
-  try {
-    const res = await fetch(url.toString(), {
-      signal: controller.signal,
-      headers: {
-        "Accept": "application/json",
-        "User-Agent": "pi-searxng/1.0"
-      }
-    });
-    
+
+  {
+    const res = await fetchRaw(url.toString(), config);
+
     if (!res.ok) {
-      const body = (await res.text()).slice(0, MAX_ERROR_BODY_LENGTH);
+      const body = res.body.slice(0, MAX_ERROR_BODY_LENGTH);
       throw new Error(`SearXNG returned ${res.status} at ${url.toString()}: ${body}`);
     }
 
-    // Read the body once as text to avoid "Body is unusable" errors when
-    // trying to read it a second time after a failed res.json() call.
-    const responseText = await res.text();
+    const responseText = res.body;
 
-    const contentType = res.headers.get("content-type") || "";
+    const contentType = res.contentType;
     if (!contentType.includes("application/json")) {
       throw new Error(
         `SearXNG returned non-JSON response (Content-Type: "${contentType}") at ${url.toString()}. ` +
@@ -76,7 +144,5 @@ export async function search(query: string, limit: number | undefined, config: C
       }));
     
     return { results };
-  } finally {
-    clearTimeout(timeout);
   }
 }

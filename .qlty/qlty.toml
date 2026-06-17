@@ -1,0 +1,33 @@
+# Qlty configuration for pi-searxng (TypeScript / Node ESM extension).
+# See https://qlty.sh/d/qlty-toml for the full reference.
+config_version = "0"
+
+# Generated/compiled output and vendored deps are not source we own.
+exclude_patterns = [
+  "**/*.min.*",
+  "**/*.d.ts",
+  "**/dist/**",
+  "**/build/**",
+  "**/node_modules/**",
+]
+
+# Treat our Vitest specs as tests (relaxes some smell thresholds).
+test_patterns = [
+  "**/*.test.ts",
+  "**/*.spec.ts",
+]
+
+[smells]
+mode = "comment"
+
+[[source]]
+name = "default"
+default = true
+
+# Dependency vulnerability scanning (package-lock.json).
+[[plugin]]
+name = "osv-scanner"
+
+# Secret detection across the repo.
+[[plugin]]
+name = "trufflehog"

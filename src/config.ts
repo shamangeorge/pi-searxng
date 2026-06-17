@@ -7,7 +7,7 @@ import { join } from "node:path";
  * Prioritizes PI_CODING_AGENT_DIR (if it points to an agent directory),
  * then HOME, and finally homedir() as a last resort.
  */
-function resolveAgentDir(): string {
+export function resolveAgentDir(): string {
   // PI_CODING_AGENT_DIR is the full agent directory
   const piDir = process.env.PI_CODING_AGENT_DIR;
   if (piDir) {
